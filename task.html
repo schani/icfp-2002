@@ -1,0 +1,540 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<title>ICFP 2002 Programming Contest Challenge Task</title>
+<link rel="stylesheet" type="text/css" href="task_files/style.css">
+</head><body>        
+<p>
+<small>$Revision: 1.50 $, $Date: 2002/09/03 05:29:06 $</small>
+
+</p><h1>ICFP 2002 Programming Contest Challenge Task</h1>
+<h2>Document Version 3</h2>
+
+This document describes the ICFP 2002 Programming Contest Challenge
+Task.  Its home is at
+<code>http://icfpcontest.cse.ogi.edu/task.html</code>
+<p>
+The challenge is to implement a program that acts as a player in a
+multi-player robot game.  Contributed programs will play against each
+other in a tournament, which will determine the winner of the
+programming contest.
+
+</p><p>
+In the game, simulated robots deliver packages in a simulated world.
+Each player controls one robot.  The simulation proceeds in discrete
+steps. At every step, each robot executes one command, which may move
+the robot, pick up packages or drop packages.  Robots win points for
+successfully delivering packages to their destination.  The winner of
+a game is the robot who finishes the game with the most points (but
+see the tournament rules later).
+
+</p><div>
+<ul>
+  <li>ICFP 2002 Programming Contest Challenge Task
+      <ul>
+	<li><a href="#world">The world</a>
+	</li><li><a href="#robots">The robots</a>
+	    <ul>
+	      <li><a href="#pushing">Pushing and Bidding </a>
+	    </li></ul>
+	</li><li><a href="#packages">The packages</a>
+      </li></ul>
+  </li><li><a href="#gameprotocol">The game protocol</a>
+      <ul>
+        <li><a href="#initialization">Initialization</a>
+            <ul>
+              <li><a href="#transmittingboard">Transmitting the board</a>
+              </li><li><a href="#transmittingconfiguration">Transmitting the configuration</a>
+            </li></ul>
+        </li><li><a href="#gameplay">Game play</a>
+            <ul>
+              <li><a href="#transmittingpackages">Transmitting the list of packages</a>
+              </li><li><a href="#commands">Commands for the robots</a>
+              </li><li><a href="#reply">Server's reply to commands</a>
+              </li><li><a href="#endofgame">The end of the game</a>
+            </li></ul>
+      </li></ul>
+  </li><li><a href="#scoring">Scoring</a>
+  </li><li><a href="#physical">Physical resource limitations</a>
+  </li><li><a href="#changes">Changes since version 1</a>
+</li></ul>
+</div>
+
+<h2 id="world">The world</h2>
+
+The world is a rectangular area of square tiles. 
+Each tile is either open space, a wall, water or a home base. 
+Robots can walk in open space and on home bases. 
+Walls are impassable. 
+If a robot steps on water, it drowns.  
+The edges of the world behave as if there were walls beyond them.
+
+<p>
+Home bases are where packages are initially located. All robots compete
+for the same set of packages.
+
+</p><p>
+Coordinates on the board are pairs of integers, ranging from (1,1) to
+(<var>width</var>, <var>height</var>), where (1,1) is the southwest
+corner of the board.
+
+</p><h2 id="robots">The robots</h2>
+
+A robot has a unique identifier (a positive integer), a maximum carrying capacity, and a sum of
+money for bidding.
+
+<p>
+The player controls the robot by issuing commands.
+
+</p><ul>
+  <li>The <code>Move</code> command moves the robot to an adjacent square,
+      in one of the four directions north, east, south or west.
+  </li><li>The <code>Pick</code> command is used to pick packages.  Packages
+      are initially available from home bases.
+      Packages may not be picked up if they are too heavy, or if there are no
+      packages available.
+  </li><li>The <code>Drop</code> command is used to drop packages.
+      Packages are always dropped. 
+</li></ul>
+
+In each step of the game each robot executes one command. The order in
+which these commands is executed is important, as robots can <em>push</em>
+each other.
+
+<h3 id="pushing">Pushing and Bidding </h3>
+
+<p>
+Robots may push each other.  Robot <code>1</code> is said to push
+robot <code>2</code> if <code>1</code> tries to move onto <code>2</code>'s
+location.  Typically that will result in <code>2</code> moving to the
+adjacent square in the direction it was pushed.  If this happens
+to be a lethal square <code>2</code> will die.  If it happens to be
+a wall neither robot will move, but <code>2</code> is still considered
+to be pushed.  Pushing is transitive in the sense that if
+<code>1</code> pushes <code>2</code>, that may result in <code>2</code>
+pushing <code>3</code>.  Both <code>2</code> and <code>3</code> are
+considered to have been pushed, and (again) the robots will only move
+if all of them can move.
+
+</p><p>
+When a robot is pushed it gets rebooted. While rebooting no command
+can be executed. A reboot lasts until the end of the current turn.
+As a result if a robot gets pushed before executing its command, the
+robot will not execute its command.
+</p>
+
+<p>
+When a robot is pushed it drops a random package if it has at least one and
+then is moved to its new location (if possible).
+</p>
+
+<p>
+<u>Example</u>: Assume there are robots <code>1,2,3</code> located as in 
+the <em>Before</em> column below. <code>1</code> wants to move
+east and <code>2</code> wants to move north. <code>3</code> will
+not move in the scenarios.
+The table illustrates different scenarios. <tt>#</tt> is a wall, <tt>.</tt>
+is empty space (see the <a href="#transmittingboard">transmitting the board</a>)
+</p><center>
+<table border="1" cellpadding="10">
+<tbody><tr><td>Before
+    </td><td>If <code>1</code> moves first
+    </td><td>If <code>2</code> moves first
+</td></tr><tr><td align="center">
+<pre>...
+1..
+.2.
+</pre>
+</td><td align="center">
+<pre>.1.
+.2.
+...
+</pre>
+</td><td align="center">
+<pre>...
+.12
+...
+</pre>
+</td></tr><tr>
+<td align="center">
+<pre>...
+.1.
+.2.
+</pre>
+</td><td align="center">
+<pre>...
+.21
+...
+</pre>
+</td><td align="center">
+<pre>.1.
+.2.
+...
+</pre>
+
+</td></tr><tr>
+<td align="center">
+<pre>.#.
+.1.
+.2.
+</pre>
+</td><td align="center">
+<pre>.#.
+.21
+...
+</pre>
+</td><td align="center">
+<pre>.#.
+.1.
+.2.
+</pre>
+
+</td></tr><tr>
+<td align="center">
+<pre>...
+.3.
+.1.
+.2.
+</pre>
+</td><td align="center">
+<pre>...
+.3.
+.21
+...
+</pre>
+</td><td align="center">
+<pre>.3.
+.1.
+.2.
+...
+</pre>
+
+</td></tr></tbody></table>
+</center>
+
+
+<p>
+<em>Bids</em> are used to control the order of moves. Every command
+has a bid, and the commands are executed in order of decreasing bids.
+Commands with the same bid are executed in a random order.
+</p>
+
+<p>Bids may be positive or negative, but not 0.  Positive bids increase
+the chance of a robot executing its command <em>before</em> other robots,
+while a negative bid increases the chance of its command being executed 
+<em>after</em> other robots.  Both of those are useful in certain situations.
+The cost of a bid is its absolute value.  For example bidding -50 will still
+decrease the robot's balance by 50 units of money.
+
+</p><p>
+If a robot did not execute its command because it was rebooting
+the bid still is deducted from its money.
+</p>
+
+<p>Bidding more than the robot's budget results in its death.
+For every command a robot must spend at least 1 unit of money.
+</p>
+
+<p><u>Example</u>: If a robot starts with 1000 units of money,
+and its policy is to spend 1 unit per command, it can participate
+in at most 1000 turns of the game, as on the 1001st first move it will
+over-spend and die.
+</p>
+
+<p>
+A robot that dies disappear from the game.
+</p>
+
+<h2 id="packages">The packages</h2>
+Every package has a unique identifier (a non-negative integer), a weight and a destination.
+If a robot dies, its packages disappear.  Packages disappear when they
+are delivered to their destination.  If a package is dropped at a location
+different from its destination, it just stays there until someone picks it up.
+
+
+
+<h1 id="gameprotocol">The game protocol</h1>
+
+The protocol works in text mode, using ASCII characters.  
+The server and clients send each other lines of text.  
+We use the UNIX convention of what a line is, i.e. a line is terminated
+by a single new line character <code>'\n'</code>(ASCII code 10).
+
+Integers are also sent as
+text, for example the number 1765 is sent as 4 consecutive characters:
+'1', '7', '6', '5'.
+
+<p>The clients and server communicate with each other via TCP/IP sockets.
+The host name where the server is located and the port number on which
+it is listening for connections will be provided as the first two
+command line arguments of a client.
+</p>
+
+
+<p>The game proceeds in two phases: an initialization phase, and the
+actual game play. 
+</p>
+
+<h2 id="initialization">Initialization</h2>
+
+The initialization phase occurs as soon as a client joins a game.
+The protocol is as follows:
+
+  <ol>
+  <li>Client: send the line <tt>Player</tt>
+  </li><li>Server: send board
+  </li><li>Server: send player's configuration
+  </li><li>Server: send initial server response (with the initial location of all players)
+  </li></ol>
+
+<h3 id="transmittingboard">Transmitting the board</h3>
+
+The board is transmitted in the following format:
+
+  <ol>
+  <li>Server: board dimensions
+  </li><li>Server: board row 1 ...
+  </li><li>Server: ... other rows ...
+  </li><li>Server: board row <i>n</i> 
+  </li></ol>
+
+<p>The dimensions are two integers, the first one indicating the width
+(i.e. the number of columns), and the second one the height 
+(i.e. the number of rows) on the board.
+</p>
+
+<p>Once the dimensions are transmitted, the server sends one line
+for every row of the board.  The first line corresponds to the row
+with vertical coordinate 1, i.e. the board is sent from south to north.
+</p>
+
+<p>Every row consists of a number of characters, indicating the type
+of tile at the corresponding position in the row.  The first character
+corresponds to horizontal position 1, i.e. each row is sent from west to east.
+
+This is the encoding for the different tile types:
+  <table border="1">
+  <tbody><tr><td>plain</td><td><tt>.</tt> (a dot)
+  </td></tr><tr><td>lethal (water)</td><td><tt>~</tt> (a tilde)
+  </td></tr><tr><td>impassable (wall)</td><td><tt>#</tt> (a hash)
+  </td></tr><tr><td>home base</td><td><tt>@</tt> (an at)
+  </td></tr></tbody></table>
+
+</p><p><u>Example</u>: Here is a (very small) example board:
+
+</p><pre>7 5
+..@....
+.......
+##.~~~~
+...~~~~
+.......
+</pre>
+
+This map has a home base (<tt>@</tt>) at position (3,1).
+Note that since row 1 is transmitted first, the north direction
+of the board is down.
+
+<h3 id="transmittingconfiguration">Transmitting the configuration</h3>
+
+The configuration consists of
+<ul>
+  <li>a unique identifier,
+  </li><li>the maximum carrying capacity,
+  </li><li>the initial amount of money (used for bidding)
+</li></ul>
+
+These are all integers and are sent on one line, separated by spaces, in the
+above order.
+
+<p><u>Example</u>: Here is an example of the initialization information
+send by the server to a client who happens to be controlling
+robot 3, who can carry at most 25 units of weight, and starts with 1000
+units of money at location (1,1).  In this particular game there
+was also robot 2 at location (2,1) and a robot 1 at location (1,2).
+
+</p><pre>7 5
+..@....
+.......
+##.~~~~
+...~~~~
+.......
+3 25 1000
+#2 X 2 Y 1 #1 X 1 Y 2 #3 X 1 Y 1
+</pre>
+
+<p>
+Note that the position of the players are transmitted in
+standard server response line, described below.
+
+
+</p><h2 id="gameplay">Game play</h2>
+
+The game is made up of a number of turns.  A turn looks as follows:
+
+  <ol>
+  <li>Server: a list of packages available at the player's current location
+  </li><li>Client: issue a command to the robot
+  </li><li>Server: server responds with what happened during the turn
+  </li></ol>
+
+At the beginning of each round the server sends 
+a list of all the packages (if any) available at the player's position.
+The client is then expected to respond with a command for its
+robot to execute. The server then says what happened to all robots
+during the turn.
+
+<h3 id="transmittingpackages">Transmitting the list of packages</h3>
+
+For every available package the server will send 4 integers:
+the package ID, the horizontal position of its destination,
+the vertical position of its destination, and the package weight.
+  
+<p><u>Example</u>: If there are 2 packages, package 17 to be delivered
+to position (133,28) weighing 50 units, and package 89 to be delivered
+to position (11,57) weighing 78 units, the server will send the following line:
+</p><p align="center"><tt>17 133 28 50 89 11 57 78</tt>
+</p><p>
+Note, that if there are no packages at a location the server will send
+just a blank line.
+
+</p><h3 id="commands">Commands for the robots</h3>
+
+A command to a robot consists of two parts: the bid and the action.
+The bid is an integer, the action is one of:
+  <ul>
+  <li><tt>Move</tt> <i>direction</i>
+  </li><li><tt>Pick</tt> <i>list of package IDs</i>
+  </li><li><tt>Drop</tt> <i>list of package IDs</i>
+  </li></ul>
+
+  <ul>
+  <li>A direction is one of: <tt>N E S W</tt>
+  </li><li>A package ID is an integer
+  </li><li>A list of package IDs consists of integers separated by space
+  </li></ul>
+
+<p><u>Example</u>: Here are some example commands:
+<br><tt>1 Move N</tt>
+<br><tt>200 Pick 17 89</tt>
+<br><tt>29 Move W</tt>
+<br><tt>-8 Move S</tt>
+<br><tt>57 Drop 11</tt>
+<br><tt>1 Drop</tt>
+</p>
+
+The package_id list to <tt>Pick</tt> and <tt>Drop</tt> can be empty.
+It is also OK to pick packages which are not there
+and drop packages which you are not carrying. 
+In both cases the packages that are valid will be dropped or picked.
+<p>
+Any malformed command will kill the robot.
+</p>
+
+<h3 id="reply">Server's reply to commands</h3>
+
+At the end of each turn the server will send each
+player a reply showing what happened to all robots during the turn.
+All the players will receive the same information.
+
+<p>
+The format of the response is list of robot updates. Each robot update
+is of the form <tt>#</tt><var>robot_id</var> and then the actions in the order
+they happened. A robot is listed if and only if it was alive at the beginning
+of the turn.
+The following actions are possible:
+</p><ul>
+<li><tt>N</tt> The robot moved north.
+</li><li><tt>S</tt> The robot moved south.
+</li><li><tt>E</tt> The robot moved east.
+</li><li><tt>W</tt> The robot moved west.
+</li><li><tt>P</tt> <var>id</var> The robot picked up package with id <var>id</var>.
+</li><li><tt>D</tt> <var>id</var> The robot dropped package with id <var>id</var>.
+</li><li><tt>X</tt> <var>num1</var> <tt>Y</tt> <var>num2</var> The robots
+location is set to <var>(num1,num2)</var>.
+</li></ul>
+
+<p>
+<u>Example</u>:
+<table border="1">
+<tbody><tr><td><tt>#2 E #3 #1 N</tt></td><td>Robot 2 moved east, robot 1
+moved north, and robot 3 did not move at all.
+</td></tr><tr><td><tt>#1 W #2 P 0 P 1</tt></td><td> Robot 2 picked up package 0 and 1 and robot 1 moved west.
+</td></tr><tr><td><tt>#2 E #1 W E</tt></td><td> Robot 2 moved east and robot 1 moved west and then east (i.e. robot 1 was pushed).
+</td></tr><tr><td><tt>#1 X 1 Y 1 E #2 E</tt></td><td> Robot 2 moved east and robot 1 appeared at location (1,1) and moved east.
+</td></tr></tbody></table>
+
+
+</p><h3 id="endofgame">The end of the game</h3>
+The game ends either when all packages have been delivered or all
+robots are dead.
+
+<h1 id="scoring">Scoring</h1>
+A correctly delivered package scores the player an amount equal to
+the weight of the package.
+
+Each robot will participate in a number of games. 
+In each game all the robots will be given the same carrying capacity
+and the same amount of money.  The winner of a
+game is the robot who has the highest score at the end of the game.
+The winner of the competition is the player with the highest total
+score over all games.
+
+<p>
+
+</p><p>
+Some games will have a single robot others will have multiple robots.
+Robots should strive to get the highest score, irregardless of the presence
+of other robots.
+The sizes of the maps may vary between 1x1 and 1000x1000 squares.
+Here are <a href="http://web.cecs.pdx.edu/%7Esheard/2002IcfpContest/maps.html">some sample maps</a>.  The number of packages
+will vary between 1 and 10,000.  The maximum amount of money robots might
+be given is 1,000,000,000. The weight of a package will be between 1 and
+1,000,000,000. The maximum carrying capacity a robot might be given is
+1,000,000,000.
+</p>
+
+<p>Throughout the competition participants are encouraged to submit maps
+to the judges.   Judges could be impressed by interesting maps...
+Mail them to 
+<a href="mailto:icfp-judges@cse.ogi.edu?subject=My%20maps">icfp-judges@cse.ogi.edu</a>
+with the words <em>My maps</em> in the subject line.
+
+</p>
+
+
+<h1 id="physical">Physical resource limitations</h1>
+
+A player should use a reasonable amount of resources.  
+Aim for:
+<ul>
+<li>not use more than 64 MB of memory at any point in a game,
+</li><li>not consume more than 1 CPU second per move on average in a
+game on our 1.5GHz Pentium 4 processor.
+</li></ul>
+
+
+<h1 id="changes">Changes since version 1</h1>
+<ul>
+<li>Clarified what happens to dropped packages (see <a href="#packages">Packages)</a>
+</li><li>Scoring changed a bit (see <a href="#scoring">Scoring</a>)
+</li><li>Clarified the validity of <tt>Pick</tt> and <tt>Drop</tt> commands
+                    (see <a href="#commands">Commands for the
+                    robots</a>)
+
+</li><li>Merged the X and Y replies from the server into one. (see <a href="#reply">Server's reply to commands</a>).
+</li><li>Clarified weight limits (see <a href="#scoring">Scoring</a>)
+</li><li>Clarified pick and drop with bad package ids (see <a href="#commands">Commands for the robots</a>)
+</li><li>Clarified carrying capacity and money limits (see <a href="#scoring">Scoring</a>)
+</li><li>Clarified server reply to player (see <a href="#reply">Server Reply</a>)
+</li><li>Robot and package ids are integers (see <a href="#robots">Robots</a> and <a href="#packages">Packages</a>)
+</li><li>Dead robots disappear (see <a href="#robots">Robots</a>)
+</li><li>Robot identifiers are <em>positive</em> integers.
+</li><li>Added example that shows that the list of robot updates might be
+empty. (see <a href="#reply">Server's reply to commands</a>)
+</li><li>Package identifiers are always non-negative.
+</li></ul>
+
+
+<hr>
+<a href="http://icfpcontest.cse.ogi.edu/">ICFP Programming Contest 2002</a>
+</body></html>

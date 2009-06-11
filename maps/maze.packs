@@ -1,0 +1,37 @@
+[
+((59,2),[
+Mk {uid=0, dest=(2,45), weight=10},
+Mk {uid=1, dest=(2,45), weight=10},
+Mk {uid=2, dest=(2,45), weight=10}]),
+
+((59,3),[
+Mk {uid=3, dest=(2,45), weight=10},
+Mk {uid=4, dest=(2,45), weight=10},
+Mk {uid=10, dest=(75,45), weight=10}]),
+
+((60,2),[
+Mk {uid=11, dest=(75,45), weight=10},
+Mk {uid=12, dest=(75,45), weight=10},
+Mk {uid=13, dest=(75,45), weight=10}]),
+
+((60,3),[
+Mk {uid=14, dest=(75,45), weight=10},
+Mk {uid=5, dest=(2,45), weight=10}]),
+
+((74,2),[
+Mk {uid=6, dest=(2,45), weight=10},
+Mk {uid=7, dest=(2,45), weight=10},
+Mk {uid=8, dest=(2,45), weight=10}]),
+
+((74,3),[
+Mk {uid=9, dest=(2,45), weight=10},
+Mk {uid=15, dest=(75,45), weight=10},
+Mk {uid=16, dest=(75,45), weight=10},
+Mk {uid=17, dest=(75,45), weight=10}]),
+
+((75,2),[
+Mk {uid=18, dest=(75,45), weight=10}]),
+
+((75,3),[
+Mk {uid=19, dest=(75,45), weight=10}])
+]
