@@ -1,0 +1,17 @@
+average weight
+
+; do dijkstra only all n rounds or when robot in vicinity
+
+
+
+sichere/unsichere pakete, die in timelimit nicht moeglich sind, nicht
+beruecksichtigen
+
+
+
+
+
+
+map mit einer homebase: wertvolle packages, deren destination zu weit
+fuer zeitlimit ist und ein paar wesentlich weniger wertvolle
+(mindestens faktor 1000), die gut im zeitlimit zu deliveren sind.

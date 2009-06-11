@@ -1,0 +1,136 @@
+-*- text -*-
+
+neue globale strategie finden:
+
+  0. pakete liegen auf aktueller position
+
+     zuerst lokale paket-pick strategie ausfuehren, es sei denn, es
+     besteht gefahr.
+
+  1. pakete im besitz
+
+     ein paket zur delivery auswaehlen.  kosten der delivery: kosten
+     des weges / wert des paketes.  jenes paket mit geringsten kosten
+     auswaehlen.
+
+  2. keine pakete im besitz
+
+     feld auswaehlen, auf dem sicher oder moeglicherweise ein paket
+     liegt.  in frage kommen: alle felder, auf denen moeglicherweise
+     pakete liegen (inkl home-bases, auf denen moeglicherweise pakete
+     liegen), alle felder, auf denen sicher pakete liegen.
+
+     kosten fuer paketfeld: kosten des weges * kosten des paketfeldes
+     / wert des paketes
+
+     kosten eines paketfeldes: beispiel:
+
+       art                                  kosten
+         von anderen besuchte homebase        10
+         von anderen nicht besuchte homebase  3
+         unsicheres paketfeld                 5
+         sicheres paketfeld                   1
+
+     wert eines nicht bekannten paketes ist durchschnittswert aller
+     bekannten pakete, oder 1 falls keine pakete bekannt.
+
+     falls auf einem feld mehrere pakete liegen oder moeglicherweise
+     liegen, werden deren werte aufsummiert.  anderenfalls wird
+     angenommen, dass auf dem jeweiligen feld genau ein paket liegt.
+
+lokale strategie:
+
+  falls die aktuelle globale strategie eine paketzustellung ist und
+  das geld fuer den weg knapp ist, ist lediglich die folgende lokale
+  strategie zu verfolgen:
+
+    1. auf dem aktuellen feld liegen pakete
+
+       befindet sich unter diesen paketen eines, dessen weg kuerzer
+       ist als der weg zum aktuellen ziel und ist es mindestens
+       genauso wertvoll wie das aktuelle paket, ist dieses aufzunehmen
+       und die globale strategie zu aendern.  in diesem fall sind auch
+       andere pakete nach der standard auswahlstrategie aufzunehmen.
+       gibt es kein solches paket, wird kein paket aufgenommen.
+
+  falls die aktuelle globale strategie eine paketaufnahme ist und das
+  geld fuer den weg knapp ist, ist keine lokale strategie zu
+  verfolgen.
+
+  in allen anderen faelle sind die folgenden lokalen strategien zu
+  verfolgen:
+
+    1. roboter sind in der naehe (overridet die anderen lokalen
+       strategien)
+
+       roboter ist in der naehe, wenn seine tatsaechliche distanz in
+       einem gewissen threshold ist.
+
+       auf jenes feld gehen, dessen penalty (unter einbeziehung
+       lediglich von robots, wasser und mauern) am geringsten ist.
+       moeglicherweise groessere umgebung verwenden.
+
+    2. auf dem aktuellen feld liegen pakete
+
+       wenn kapazitaet ausreicht, alle pakete nehmen und globale
+       strategie ueberdenken.
+
+       wenn kapazitaet nicht ausreicht: alle pakete (die in besitz und
+       die am boden, allerdings nur jene, deren gewicht <=
+       tragekapazitaet ist) in betracht ziehen fuer aenderung der
+       globalen strategie.  globales paket auf jeden fall zum nehmen
+       vormerken.  anschliessend restliche pakete ordnen nach:
+       (penalty fuer weg von globalem ziel zu paketziel / wert des
+       pakets).  in aufsteigender reihenfolge pakete vormerken,
+       solange kapazitaet erlaubt.  dann ueberfluessige pakete droppen
+       und zusaetzliche pakete nehmen (2 schritte).
+
+    3. in der naehe ist ein feld auf dem sicher oder moeglicherweise
+       pakete liegen
+
+       das feld ist in der naehe, wenn seine tatsaechliche distanz in
+       einem gewissen threshold ist.
+
+       wenn manhatten-distanz eines roboters zu dem feld kleiner
+       gleich der eigenen tatsaechlichen distanz zum feld ist, keine
+       lokale aktion.
+
+       anderenfalls, zum paket gehen und dann nach strategie 2
+       verfahren.
+
+    4. (sophisticated) wenn robot getoetet werden kann, toetung
+       versuchen.
+
+bewertung von feldern/pfaden:
+
+  bewertung p(f) eines feldes f:
+
+    betrachtung eines diamant-umkreises.  summe ueber gewichtete
+    penalties der felder im umkreis.  gewicht abhaengig von distanz zu
+    f.  beispiel:
+
+      dist     gewicht
+        0         10
+        1         4
+        2         2
+        3         1
+
+      feld     penalty
+        .         30
+        ~         80
+        R         100    (robot)
+        #         50
+        ?         20     (unsicheres paket)
+        @         10
+        !         0      (sicheres paket)
+
+  bewertung p(f1,f2) eines ueberganges zwischen zwei benachbarten
+  feldern f1 und f2:
+
+    p(f1,f2) = p(f2) + c
+
+    c ... wegkonstante, zb 10
+
+  konservative schaetzung e(f1,f2) der kosten von f1 nach f2:
+
+    e(f1,f2) = c * (abs(x(f1)-x(f2)) + abs(y(f1)-y(f2)))

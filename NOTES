@@ -1,0 +1,46 @@
+http://icfpcontest.cse.ogi.edu/
+
+client-code darf kein einziges zeichen zuviel aus socket lesen!
+
+zu speichern pro home base: besucht von eigenem robot, besucht von
+fremdem robot.
+
+pro package: location oder besitzer wenn bekannt.  location kann
+unsicher sein, naemlich wenn packet gedropped wurde und destination
+nicht bekannt ist (in diesem fall ist unbekannt, ob das paket
+delivered wurde, in welchem falle es verschwindet).  destination wenn
+bekannt.  wert wenn bekannt.  gewicht wenn bekannt.
+
+ist es sinnvoll, zu versuchen, ein von jemand anderem gedroppetes
+package zu nehmen?  antwort: ziemlich sicher nicht.  moeglichkeiten:
+  1. es wurde delivered, dann ist es nicht mehr da
+  2. es wurde bei einem push gedropped, in diesem fall ist zumindest
+     ein roboter in der naehe, der es nehmen koennte.
+  3. es wurde gedropped, weil es nicht viel wert ist.
+es sollte nur dann in erwaegung gezogen werden, wenn das paket bekannt
+ist, nicht delivered wurde und kein roboter in der naehe ist.
+
+entscheidung zwischen mehreren moeglichkeiten:
+  1. eines der pakete, die man traegt, deliveren.
+  2. zu einem platz laufen, auf dem wahrscheinlich ein paket ist.  nur
+     dann, wenn man kein paket hat oder es nicht zugestellt werden
+     kann.
+  3. zu einem platz laufen, auf dem sicher ein paket ist.  sinnvoll,
+     wenn dieses paket wertvoller ist, als die getragenen oder seine
+     destination in der naehe liegt.
+  4. ausweichmassnahme
+  5. paket, dass auf dem boden liegt, nehmen.  falls platz ist und
+     keine gefahr besteht, immer.  falls kein platz ist, muss
+     gewichtet werden.  falls gefahr besteht, verschwinden.
+
+sollte man bots gegen toet-bots testen?
+
+gewichtung von position:
+  1. grosse penalty fuer naehe zu anderen bots
+  2. penalty fuer naehe zu wasser
+  3. bonus fuer naehe zu (von noch niemandem besuchten) home bases und
+     zu sicheren positionen von packages
+
+zwei moeglichkeiten fuer implementierung von bot:
+  1. strategie entscheidung in jedem zug
+  2. strategie entscheidung bei jedem "ereignis"
