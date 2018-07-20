@@ -50,9 +50,9 @@ val cannot_visit_cell' : board -> int -> int -> bool
 val row_from_string : string -> bitmap
 val row_from_string' : int -> string -> bitmap
 
-val row_to_string : bitmap -> string
+val row_to_string : bitmap -> bytes
 
-val row_to_string' : bitmap -> string
+val row_to_string' : bitmap -> bytes
 
 val blit_row' : bitmap -> int -> board -> board
 

@@ -9,13 +9,13 @@
  **)
 
 open Char
-open String
+open Bytes
 
 type bitmap = 
   | BM of 
 	int * 				(* size of the bitmap (# of bits)   *)
 	int *				(* index of last word used in array *)
-	string				(* chars for storing data 	    *)
+	bytes				(* chars for storing data 	    *)
 					(*	. easy EA calculation	    *)
 					(*      . last char is zero-padded  *)
 
@@ -59,7 +59,7 @@ let make_full n =
   else
     let s = words_for_bits n in
       let arr = make s fullmask in
-        arr.[s - 1] <- lastfullmask n;
+        Bytes.set arr (s - 1) (lastfullmask n);
         BM(n,s - 1,arr)
 
 let size (BM(s,_,_)) = s
@@ -68,61 +68,61 @@ let inrangeP bm i = i >= 0 && i < (size bm)
 
 let eqsize2P x y = size x = size y
 
-let copy (BM(s,w,arr)) = BM(s,w,String.copy arr)
+let copy (BM(s,w,arr)) = BM(s,w,Bytes.copy arr)
 
 let clear (BM(_,j,sd)) =
-  sd.[0] <- '\000';					(* ref: s, d *)
+  Bytes.set sd 0 '\000';					(* ref: s, d *)
   for i = j downto 1 do					(* ref: j *)
-    sd.[i] <- '\000'
+    Bytes.set sd i '\000'
   done
 
 let equalP (BM(n1,j,s1)) (BM(n2,_,s2)) =
   let i = ref j
-  and retval = ref (n1 = n2 && s1.[0] = s2.[0]) in	(* ref: s1, s2 *)
+  and retval = ref (n1 = n2 && (Bytes.get s1 0) = (Bytes.get s2 0)) in	(* ref: s1, s2 *)
     while !retval && !i > 0 do
-      retval := s1.[!i] = s2.[!i];
+      retval := (Bytes.get s1 !i) = (Bytes.get s2 !i);
       decr i
     done;
     !retval
 
 let emptyP (BM(_,j,s)) =
   let i = ref j						(* ref: j *)
-  and retval = ref (s.[0] = '\000') in			(* ref: s *)
+  and retval = ref ((Bytes.get s 0) = '\000') in			(* ref: s *)
     while !retval && !i > 0 do				(* skip first word *)
-      retval := s.[!i] = '\000';
+      retval := (Bytes.get s !i) = '\000';
       decr i
     done;
     !retval
 
 let fullP (BM(n,j,s)) =
   let i = ref (j-1)					(* ref: j *)
-  and retval = ref (lastfullmask n = s.[j]) in		(* ref: s, n *)
+  and retval = ref (lastfullmask n = (Bytes.get s j)) in		(* ref: s, n *)
     while !retval && !i >= 0 do	    			(* skip last word *)
-      retval := s.[!i] = fullmask;
+      retval := (Bytes.get s !i) = fullmask;
       decr i
     done;
     !retval
 
 let bitsetP' (BM(_,_,s)) i =
   ignore s;						(* ref: s *)
-  (code (s.[wordidx_of_bitidx i]) land (bitmask_of_bitidx i)) <> 0
+  (code (Bytes.get s (wordidx_of_bitidx i)) land (bitmask_of_bitidx i)) <> 0
 
 let setbit' (BM(_,_,sd)) i =
   let wordidx = wordidx_of_bitidx i in
-  let old_contents = code sd.[wordidx] in
+  let old_contents = code (Bytes.get sd wordidx) in
   let bitmask = bitmask_of_bitidx i in
-    sd.[wordidx] <- unsafe_chr (old_contents lor bitmask)
+    Bytes.set sd wordidx (unsafe_chr (old_contents lor bitmask))
 
 let clearbit' (BM(_,_,sd)) i =
   let wordidx = wordidx_of_bitidx i in
-  let old_contents = code sd.[wordidx] in
+  let old_contents = code (Bytes.get sd wordidx) in
   let bitmask = bitmask_of_bitidx i in
-    sd.[wordidx] <- unsafe_chr (old_contents land (lnot bitmask))
+    Bytes.set sd wordidx (unsafe_chr (old_contents land (lnot bitmask)))
 
 let blit' (BM(_,j,s)) (BM(_,_,d) as dst) =
-  d.[0] <- s.[0];					(* ref: s, d *)
+  Bytes.set d 0 (Bytes.get s 0);					(* ref: s, d *)
   for i = j downto 1 do					(* ref: j *)
-    d.[i] <- s.[i]
+    Bytes.set d i (Bytes.get s i)
   done;
   dst
 
@@ -141,30 +141,30 @@ let weight8_of_int x =
     (x land 0x0F) + ((x lsr 4) land 0x0F)
 
 let weight (BM(_,j,s)) =
-  let w = ref (weight8_of_int (code s.[0])) in		(* ref: s *)
+  let w = ref (weight8_of_int (code (Bytes.get s 0))) in		(* ref: s *)
   for i = j downto 1 do					(* ref: j *)
-    w := !w + weight8_of_int (code s.[i])
+    w := !w + weight8_of_int (code (Bytes.get s i))
   done;
   !w
 
 let to_string (BM(n,j,s) as bm) = 
-  let str = String.make n '0' in			(* ref: n, str *)
+  let str = Bytes.make n '0' in			(* ref: n, str *)
   ignore s;						(* ref: s *)
   ignore j;						(* ref: j *)
     for i = n - 1 downto 0 do
-      str.[i] <- (if bitsetP' bm i then '1' else '0')
+      Bytes.set str i (if bitsetP' bm i then '1' else '0')
     done;
     str
 
 let from_string s = 
-  let l = String.length s in				(* ref: s *)
+  let l = Bytes.length s in				(* ref: s *)
     if l = 0 then raise Bad_String
     else 
       let (BM(_,_,d) as dst) = make_empty l in		(* ref: dst *)
 	ignore s;					(* ref: s *)
 	ignore d;					(* ref: d *)
         for i = l - 1 downto 0 do
-	  match s.[i] with
+	  match Bytes.get s i with
 	    | '0' -> ()
 	    | '1' -> setbit' dst i
 	    | _   -> raise Bad_String

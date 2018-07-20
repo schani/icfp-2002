@@ -111,10 +111,10 @@ val clearbit' : bitmap2d -> int -> int -> unit
     column and the [y]-row of bitmap [bm].
     Raises [Bad_Index] if [x] or [y] is out of range. *)
 
-val to_string : bitmap2d -> string
+val to_string : bitmap2d -> bytes
 (** [Bitmap2d.to_string bm] returns the textual representation of 
     bitmap [bm]. *)
 
-val row_to_string' : bitmap2d -> int -> string
+val row_to_string' : bitmap2d -> int -> bytes
 (** [Bitmap2d.row_to_string' bm y] returns the textual representation
     of the [y]-th row of bitmap [bm]. *)

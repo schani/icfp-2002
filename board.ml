@@ -10,6 +10,7 @@
 
 open Bitmap
 open Bitmap2d
+open Bytes
 
 (** A board with x columns and y rows is a 2d-bitmap of size x*y. 
 
@@ -109,17 +110,17 @@ let fetch_row' bm2d y bm = Bitmap2d.fetch_row' bm2d y bm
 
 let row_to_string bm = 
   let n = ((Bitmap.size bm) / 2) - 2 in
-  let s = String.make n '.' in
+  let s = Bytes.make n '.' in
     for i = 1 to n do
-      s.[i-1] <- cell_to_char (getcell_in_row' bm i)
+      Bytes.set s (i-1) (cell_to_char (getcell_in_row' bm i))
     done;
     s
 
 let row_to_string' bm = 
   let n = (Bitmap.size bm) / 2 in
-  let s = String.make n '.' in
+  let s = Bytes.make n '.' in
     for i = 0 to (n-1) do
-      s.[i] <- cell_to_char (getcell_in_row' bm i)
+      Bytes.set s i (cell_to_char (getcell_in_row' bm i))
     done;
     s
 	

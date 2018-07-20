@@ -87,10 +87,10 @@ val clearbit : bitmap -> int -> unit
 val weight : bitmap -> int
 (** [Bitmap.weight x] returns the number of set bits in [x]. *)
 
-val to_string : bitmap -> string
+val to_string : bitmap -> bytes
 (** [Bitmap.to_string x] returns the textual representation of bitmap [x]. *)
 
-val from_string : string -> bitmap
+val from_string : bytes -> bitmap
 (** [Bitmap.from_string str] returns the bitmap corresponding to the
     string [str]. 
     Raises [Bad_String] if the string is empty

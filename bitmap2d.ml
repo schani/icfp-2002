@@ -75,7 +75,7 @@ let row_to_string' (BM2d(c,r,b)) y = Bitmap.to_string b.(y)
 let to_string (BM2d(x,y,s)) = 		(* not efficient. use string-buffer? *)
   let rec loop i = 
     if i = 0 then Bitmap.to_string s.(i)
-    else loop (i-1) ^ Bitmap.to_string s.(i) 
+    else Bytes.cat (loop (i-1)) (Bitmap.to_string s.(i))
   in loop (y-1)				(* y-1 >= 0 *)
 
 let bitsetP' (BM2d(_,_,s)) x y = Bitmap.bitsetP' s.(y) x 
